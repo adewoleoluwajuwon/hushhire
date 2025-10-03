@@ -4,6 +4,7 @@ import Landing from "./pages/Landing";
 import Jobs from "./pages/Jobs";
 import JobDetails from "./pages/JobDetails";
 import Auth from "./pages/Auth";
+import DashboardEmployer from "./pages/DashboardEmployer";
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Route path="jobs" element={<Jobs />} />
         <Route path="/jobs/:id" element={<JobDetails />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/dashboard/employer" element={<DashboardEmployer />} />
       </Routes>
     </AppShell>
   );

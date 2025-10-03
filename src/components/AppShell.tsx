@@ -76,7 +76,7 @@ export default function AppShell({ children }: Props) {
           <Rocket className="h-4 w-4" />
         </motion.span>
         <span className="text-xl font-extrabold tracking-tight text-gray-900 transition-colors dark:text-white">
-          LaunchHire
+          HushHire
         </span>
       </Link>
     ),
