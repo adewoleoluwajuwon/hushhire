@@ -1,45 +1,258 @@
-import React from "react";
+import React, { useCallback, useMemo, useState } from "react";
+import {
+  Navbar as FBNavbar,
+  Button,
+  Dropdown,
+  Avatar,
+  NavbarBrand,
+  NavbarToggle,
+  NavbarCollapse,
+  DropdownItem,
+} from "flowbite-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import {
+  Rocket,
+  Briefcase,
+  Search as SearchIcon,
+  Sun,
+  Moon,
+  ChevronRight,
+} from "lucide-react";
 
- const Navbar = () =>{
-    return(
-        <>
-            
+// If you already have these in your project, keep your originals:
+import { supabase } from "../api/supabase";     // <-- adjust path if different
+import { useSession } from "../lib/hooks";      // <-- adjust path if different
 
-<nav className="bg-white border-gray-200 dark:bg-gray-900">
-  <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
-    <a href="https://flowbite.com/" className="flex items-center space-x-3 rtl:space-x-reverse">
-        <img src="https://flowbite.com/docs/images/logo.svg" className="h-8" alt="Flowbite Logo" />
-        <span className="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">Flowbite</span>
-    </a>
-    <button data-collapse-toggle="navbar-default" type="button" className="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600" aria-controls="navbar-default" aria-expanded="false">
-        <span className="sr-only">Open main menu</span>
-        <svg className="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 17 14">
-            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M1 1h15M1 7h15M1 13h15"/>
-        </svg>
-    </button>
-    <div className="hidden w-full md:block md:w-auto" id="navbar-default">
-      <ul className="font-medium flex flex-col p-4 md:p-0 mt-4 border border-gray-100 rounded-lg bg-gray-50 md:flex-row md:space-x-8 rtl:space-x-reverse md:mt-0 md:border-0 md:bg-white dark:bg-gray-800 md:dark:bg-gray-900 dark:border-gray-700">
-        <li>
-          <a href="#" className="block py-2 px-3 text-white bg-blue-700 rounded-sm md:bg-transparent md:text-blue-700 md:p-0 dark:text-white md:dark:text-blue-500" aria-current="page">Home</a>
-        </li>
-        <li>
-          <a href="#" className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">About</a>
-        </li>
-        <li>
-          <a href="#" className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">Services</a>
-        </li>
-        <li>
-          <a href="#" className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">Pricing</a>
-        </li>
-        <li>
-          <a href="#" className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">Contact</a>
-        </li>
-      </ul>
-    </div>
-  </div>
-</nav>
-
-        </>
-    )
+// ---- Dark mode toggle (JS version)
+function useDarkMode() {
+  const toggle = useCallback(() => {
+    const el = document.documentElement;
+    const isDark = el.classList.toggle("dark");
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+  }, []);
+  return toggle;
 }
-export default Navbar
+
+// ---- Active matcher (JS version)
+function useActiveMatcher() {
+  const { pathname } = useLocation();
+  return useCallback(
+    (to) => pathname === to || pathname.startsWith(`${to}/`),
+    [pathname]
+  );
+}
+
+export default function AppNavbar() {
+  const { user } = useSession?.() ?? { user: null };
+  const nav = useNavigate();
+  const toggleDark = useDarkMode();
+  const isActive = useActiveMatcher();
+  const [q, setQ] = useState("");
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      nav("/auth");
+    } catch {
+      // swallow for now
+    }
+  };
+
+  const goSearch = useCallback(() => {
+    const query = q.trim();
+    if (query) nav(`/jobs?query=${encodeURIComponent(query)}`);
+  }, [q, nav]);
+
+  const brand = useMemo(
+    () => (
+      <Link to="/" className="group inline-flex items-center gap-2">
+        <motion.span
+          initial={{ rotate: -10, scale: 0.9, opacity: 0 }}
+          animate={{ rotate: 0, scale: 1, opacity: 1 }}
+          transition={{ duration: 0.6 }}
+          whileHover={{ rotate: 360 }}
+          className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/30"
+        >
+          <Rocket className="h-4 w-4" />
+        </motion.span>
+        <span className="text-xl font-extrabold tracking-tight text-gray-900 transition-colors dark:text-white">
+          LaunchHire
+        </span>
+      </Link>
+    ),
+    []
+  );
+
+  return (
+    <div className="sticky top-0 z-40 bg-white/70 backdrop-blur supports-[backdrop-filter]:bg-white/70 dark:bg-gray-900/60 supports-[backdrop-filter]:dark:bg-gray-900/60">
+      <div className="mx-auto max-w-screen-xl px-3 md:px-4">
+        <FBNavbar
+          fluid
+          rounded
+          className="border-b border-gray-200/70 bg-transparent dark:border-gray-800/70"
+        >
+          {/* Brand (keeps your new minimal visual style) */}
+          <NavbarBrand as="div">{brand}</NavbarBrand>
+
+          {/* Right section */}
+          <div className="flex items-center gap-2 md:order-2">
+            {/* Desktop search */}
+            <div className="relative hidden items-center md:flex">
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && goSearch()}
+                placeholder="Search roles…"
+                className="w-56 rounded-xl border border-gray-200 bg-white/90 px-3 py-2 pr-9 text-sm shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-gray-700 dark:bg-gray-800/80 dark:focus:border-blue-500 dark:focus:ring-blue-900/40"
+              />
+              <button
+                aria-label="Search"
+                onClick={goSearch}
+                className="absolute right-1.5 inline-flex h-7 w-7 items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <SearchIcon className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Dark mode toggle */}
+            <Button color="gray" onClick={toggleDark} className="rounded-xl">
+              <span className="sr-only">Toggle theme</span>
+              <Sun className="hidden h-5 w-5 dark:inline" />
+              <Moon className="h-5 w-5 dark:hidden" />
+            </Button>
+
+            {/* Auth dropdown or CTAs */}
+            {user ? (
+              <Dropdown inline label={<Avatar rounded img={user.user_metadata?.avatar_url} />}>
+                <DropdownItem as={Link} to="/dashboard/employer">
+                  <div className="flex items-center gap-2">
+                    <Briefcase className="h-4 w-4" /> Employer Dashboard
+                  </div>
+                </DropdownItem>
+                <DropdownItem onClick={handleSignOut}>Sign out</DropdownItem>
+              </Dropdown>
+            ) : (
+              <div className="hidden items-center gap-2 sm:flex">
+                <Button color="gray" as={Link} to="/auth" className="rounded-xl">
+                  Sign in
+                </Button>
+                <Button
+                  as={Link}
+                  to="/auth"
+                  className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/30 hover:from-blue-700 hover:to-indigo-700"
+                >
+                  <Briefcase className="mr-2 h-4 w-4" /> Post a job
+                </Button>
+              </div>
+            )}
+
+            <NavbarToggle />
+          </div>
+
+          {/* Collapsible nav — mirrors the new Flowbite navbar structure */}
+          <NavbarCollapse>
+            <NavLink to="/jobs" isActive={isActive("/jobs")}>
+              Jobs
+            </NavLink>
+            <NavLink to="/companies" isActive={isActive("/companies")}>
+              Companies
+            </NavLink>
+
+            {/* Categories dropdown */}
+            <Dropdown inline label={<span className="text-sm">Categories</span>}>
+              {[
+                { label: "Engineering", q: "engineering" },
+                { label: "Product", q: "product" },
+                { label: "Design", q: "design" },
+                { label: "Remote-friendly", q: "remote" },
+              ].map((c) => (
+                <DropdownItem key={c.q} as={Link} to={`/jobs?category=${c.q}`}>
+                  {c.label}
+                </DropdownItem>
+              ))}
+            </Dropdown>
+
+            {/* Resources dropdown */}
+            <Dropdown inline label={<span className="text-sm">Resources</span>}>
+              <DropdownItem as={Link} to="/resources/interview-prep">
+                Interview Prep
+              </DropdownItem>
+              <DropdownItem as={Link} to="/resources/salary-guide">
+                Salary Guide
+              </DropdownItem>
+              <DropdownItem as={Link} to="/blog">
+                Blog
+              </DropdownItem>
+            </Dropdown>
+
+            {/* Mobile search + CTAs */}
+            <div className="md:hidden">
+              {user ? (
+                <Button as={Link} to="/dashboard/employer" color="light" className="my-1 w-full rounded-xl">
+                  Employer Dashboard
+                </Button>
+              ) : (
+                <>
+                  <Button as={Link} to="/auth" color="gray" className="my-1 w-full rounded-xl">
+                    Sign in
+                  </Button>
+                  <Button
+                    as={Link}
+                    to="/auth"
+                    className="my-1 w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
+                  >
+                    <Briefcase className="mr-2 h-4 w-4" /> Post a job
+                  </Button>
+                </>
+              )}
+
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && goSearch()}
+                  placeholder="Search roles…"
+                  className="flex-1 rounded-xl border border-gray-200 bg-white/90 px-3 py-2 text-sm shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-gray-700 dark:bg-gray-800/80 dark:focus:border-blue-500 dark:focus:ring-blue-900/40"
+                />
+                <Button color="light" onClick={goSearch} className="rounded-xl">
+                  <SearchIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </NavbarCollapse>
+        </FBNavbar>
+      </div>
+    </div>
+  );
+}
+
+// Small presentational helper
+function NavLink({ to, isActive, children }) {
+  return (
+    <div className="relative">
+      <Link
+        to={to}
+        className={`group inline-flex items-center rounded-lg px-2 py-1.5 text-sm transition-colors ${
+          isActive
+            ? "text-blue-700 dark:text-blue-400"
+            : "text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+        }`}
+      >
+        {children}
+        <ChevronRight
+          className={`ml-1 h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 ${
+            isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          }`}
+        />
+      </Link>
+      <span
+        className={`pointer-events-none absolute right-2 -bottom-[2px] left-2 h-0.5 rounded-full transition-all ${
+          isActive
+            ? "bg-gradient-to-r from-blue-600 to-indigo-600 opacity-100"
+            : "opacity-0 group-hover:opacity-60 dark:from-blue-500 dark:to-indigo-500"
+        }`}
+      />
+    </div>
+  );
+}
