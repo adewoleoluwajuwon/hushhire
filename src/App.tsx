@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import AppShell from "./components/AppShell";
 import Landing from "./pages/Landing";
 import Jobs from "./pages/Jobs";
@@ -15,6 +15,7 @@ function App() {
         <Route path="/jobs/:id" element={<JobDetails />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/dashboard/employer" element={<DashboardEmployer />} />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </AppShell>
   );
