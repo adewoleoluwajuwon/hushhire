@@ -1,7 +1,6 @@
-// src/lib/hooks.js
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../api/supabase";
+import type { Job, Application } from "./types";
 import { useEffect, useState } from "react";
 
 // ✅ Helper: get current user or throw
@@ -15,8 +14,11 @@ export async function getUserOrThrow() {
   return user;
 }
 
-// ✅ Ensure profile exists (moved from AuthCard)
-export async function ensureProfile(role, fullName) {
+// Ensure profile exists (moved from AuthCard)
+export async function ensureProfile(
+  role: "employer" | "seeker",
+  fullName: string
+) {
   const user = await getUserOrThrow();
 
   const { error: upsertError } = await supabase.from("profiles").upsert(
@@ -25,7 +27,7 @@ export async function ensureProfile(role, fullName) {
       full_name: fullName,
       role,
     },
-    { onConflict: "user_id" },
+    { onConflict: "user_id" }
   );
 
   if (upsertError) throw upsertError;
@@ -42,13 +44,13 @@ export function useJobs() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data as Job[];
     },
   });
 }
 
 // ---- SINGLE JOB ----
-export function useJob(jobId) {
+export function useJob(jobId?: string) {
   return useQuery({
     queryKey: ["job", jobId],
     enabled: !!jobId,
@@ -60,16 +62,18 @@ export function useJob(jobId) {
         .maybeSingle();
 
       if (error) throw error;
-      return data;
+      return data as Job | null;
     },
   });
 }
 
 // ---- CREATE / UPDATE JOB ----
+type JobInsert = Partial<Job>;
+
 export function useUpsertJob() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload) => {
+    mutationFn: async (payload: JobInsert) => {
       const user = await getUserOrThrow();
 
       const toInsert = { ...payload, created_by: user.id };
@@ -80,7 +84,7 @@ export function useUpsertJob() {
         .maybeSingle();
 
       if (error) throw error;
-      return data;
+      return data as Job;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["jobs"] });
@@ -89,10 +93,16 @@ export function useUpsertJob() {
 }
 
 // ---- APPLY TO JOB ----
+type ApplicationInsert = {
+  job_id: string;
+  cover_letter?: string;
+  resume_url?: string;
+};
+
 export function useApply() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload) => {
+    mutationFn: async (payload: ApplicationInsert) => {
       const user = await getUserOrThrow();
 
       const { data, error } = await supabase
@@ -107,7 +117,7 @@ export function useApply() {
         .maybeSingle();
 
       if (error) throw error;
-      return data;
+      return data as Application;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["applications"] });
@@ -117,7 +127,9 @@ export function useApply() {
 
 // ---- SESSION HOOK ----
 export function useSession() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<
+    null | Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"]
+  >(null);
 
   useEffect(() => {
     // fetch current user
@@ -127,7 +139,7 @@ export function useSession() {
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null);
-      },
+      }
     );
 
     return () => {

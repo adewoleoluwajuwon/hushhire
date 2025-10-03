@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "checkJs": true, // 👈 gives type checking on JS files too
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "noEmit": true // 👈 stop TS from writing .js files
+  },
+  "include": ["src"], // only check files in src/
+  "exclude": ["node_modules", "dist"] // ignore these
+}
