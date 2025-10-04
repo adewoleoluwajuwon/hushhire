@@ -5,6 +5,7 @@ import Jobs from "./pages/Jobs";
 import JobDetails from "./pages/JobDetails";
 import Auth from "./pages/Auth";
 import DashboardEmployer from "./pages/DashboardEmployer";
+import ProtectedRoute from "./routes/ProtectedRoute"; // ← add this
 
 function App() {
   return (
@@ -14,7 +15,17 @@ function App() {
         <Route path="jobs" element={<Jobs />} />
         <Route path="/jobs/:id" element={<JobDetails />} />
         <Route path="/auth" element={<Auth />} />
-        <Route path="/dashboard/employer" element={<DashboardEmployer />} />
+
+        {/* Protect this route for employers only */}
+        <Route
+          path="/dashboard/employer"
+          element={
+            <ProtectedRoute role="employer">
+              <DashboardEmployer />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </AppShell>

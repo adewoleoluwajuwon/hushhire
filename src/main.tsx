@@ -1,21 +1,24 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import App from "./App.js";
+import App from "./App"; // ← drop the .js if you're on TS
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "./index.css"; // <-- THIS IS CRITICAL
-import "flowbite"; // <-- enables Flowbite’s tiny JS (for data-* toggles)
+import { AuthProvider } from "./lib/AuthProvider"; // ← add this
+import "./index.css";
+import "flowbite";
 
 const queryClient = new QueryClient();
 
-const rootElement = document.getElementById("root") as HTMLElement;
-
-ReactDOM.createRoot(rootElement).render(
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <BrowserRouter>
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
+      <AuthProvider>
+        {" "}
+        {/* ← wrap App so ProtectedRoute can use useAuth() */}
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

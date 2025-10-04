@@ -13,15 +13,32 @@ import {
   ModalFooter,
 } from "flowbite-react";
 import { supabase } from "../api/supabase";
-import { getUserOrThrow } from "../lib/hooks";
+import { useAuth } from "../lib/AuthProvider";
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  companyId: string; // ✅ added
+  companyId: string;
 };
 
+// Utility: detect RLS/permission-ish errors without relying on .status
+function isRlsOrPermissionError(err: any) {
+  const code = String(err?.code ?? "").toUpperCase(); // e.g., "42501", "PGRST301"
+  const blob = `${err?.message ?? ""} ${err?.details ?? ""} ${
+    err?.hint ?? ""
+  }`.toLowerCase();
+  return (
+    code === "42501" || // insufficient_privilege (PG)
+    code === "PGRST301" || // typical PostgREST RLS code
+    /row[- ]level security|rls|policy|permission denied|insufficient privilege|not allowed/.test(
+      blob
+    )
+  );
+}
+
 export default function JobEditorModal({ open, onClose, companyId }: Props) {
+  const { session } = useAuth();
+
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -34,35 +51,62 @@ export default function JobEditorModal({ open, onClose, companyId }: Props) {
   });
 
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const submit = async () => {
     setError(null);
+
+    if (!session?.user) {
+      setError("You must be signed in to post a job.");
+      return;
+    }
+
+    setBusy(true);
     try {
-      const user = await getUserOrThrow();
+      const tags = form.tags
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
 
-      const { error: insertError } = await supabase.from("jobs").insert({
-        title: form.title,
-        description: form.description,
-        employment_type: form.employment_type as any,
-        location_type: form.location_type as any,
-        location_text: form.location_text,
-        tags: form.tags
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
-        min_salary: form.min_salary ? Number(form.min_salary) : null,
-        max_salary: form.max_salary ? Number(form.max_salary) : null,
-        currency: "NGN",
-        is_active: true,
-        created_by: user.id,
-        company_id: companyId, // ✅ link job to company
-      });
+      const min_salary = form.min_salary ? Number(form.min_salary) : null;
+      const max_salary = form.max_salary ? Number(form.max_salary) : null;
 
-      if (insertError) throw insertError;
+      const { data, error } = await supabase
+        .from("jobs")
+        .insert([
+          {
+            company_id: companyId,
+            title: form.title,
+            description: form.description,
+            employment_type: form.employment_type as any,
+            location_type: form.location_type as any,
+            location_text: form.location_text,
+            min_salary,
+            max_salary,
+            currency: "NGN",
+            tags,
+            is_active: true,
+            created_by: session.user.id, // per instruction
+          },
+        ])
+        .select()
+        .single();
 
-      onClose(); // ✅ Close on success
+      if (error) {
+        if (isRlsOrPermissionError(error)) {
+          setError("You’re not allowed to post for this company.");
+        } else {
+          setError(error.message ?? "Failed to post job.");
+        }
+        return;
+      }
+
+      // success
+      onClose();
     } catch (e: any) {
-      setError(e.message);
+      setError(e?.message ?? "Failed to post job.");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -176,8 +220,10 @@ export default function JobEditorModal({ open, onClose, companyId }: Props) {
       </ModalBody>
 
       <ModalFooter>
-        <Button onClick={submit}>Publish</Button>
-        <Button color="light" onClick={onClose}>
+        <Button onClick={submit} disabled={busy}>
+          {busy ? "Publishing..." : "Publish"}
+        </Button>
+        <Button color="light" onClick={onClose} disabled={busy}>
           Cancel
         </Button>
       </ModalFooter>
